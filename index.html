@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>畢業插畫生成器</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Caveat:wght@400;600;700&family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #fdf8f2;
+    --soft-yellow: #f5c842;
+    --dusty-pink: #e8a0b0;
+    --burgundy: #8b3a52;
+    --ink: #1a1a2e;
+    --soft-gray: #f0ebe3;
+    --accent-green: #7db89a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background-color: var(--cream);
+    font-family: 'Noto Sans TC', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Decorative background doodles */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(circle at 10% 20%, rgba(245,200,66,0.08) 0%, transparent 40%),
+      radial-gradient(circle at 90% 80%, rgba(232,160,176,0.1) 0%, transparent 40%),
+      radial-gradient(circle at 50% 50%, rgba(125,184,154,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .doodle-bg {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .doodle-bg svg {
+    position: absolute;
+    opacity: 0.12;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+    position: relative;
+  }
+
+  .header-tag {
+    font-family: 'Caveat', cursive;
+    font-size: 15px;
+    color: var(--burgundy);
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    display: block;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.1s;
+  }
+
+  .header h1 {
+    font-family: 'Caveat', cursive;
+    font-size: clamp(36px, 8vw, 56px);
+    color: var(--ink);
+    line-height: 1.1;
+    font-weight: 700;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.2s;
+  }
+
+  .header h1 span {
+    color: var(--burgundy);
+    font-style: italic;
+  }
+
+  .header-underline {
+    width: 120px;
+    height: 4px;
+    background: linear-gradient(90deg, var(--soft-yellow), var(--dusty-pink));
+    margin: 16px auto 0;
+    border-radius: 2px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.3s;
+  }
+
+  .header p {
+    font-size: 14px;
+    color: #888;
+    margin-top: 12px;
+    line-height: 1.6;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.4s;
+  }
+
+  /* Upload Zone */
+  .upload-section {
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.5s;
+  }
+
+  .upload-zone {
+    border: 2.5px dashed #d4c9be;
+    border-radius: 20px;
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .upload-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(245,200,66,0.04), rgba(232,160,176,0.04));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .upload-zone:hover::before,
+  .upload-zone.dragover::before {
+    opacity: 1;
+  }
+
+  .upload-zone:hover,
+  .upload-zone.dragover {
+    border-color: var(--dusty-pink);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(232,160,176,0.15);
+  }
+
+  .upload-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    display: block;
+    filter: grayscale(0.3);
+  }
+
+  .upload-title {
+    font-family: 'Caveat', cursive;
+    font-size: 22px;
+    color: var(--ink);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .upload-sub {
+    font-size: 13px;
+    color: #aaa;
+  }
+
+  .upload-btn {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 10px 28px;
+    background: var(--ink);
+    color: white;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.03em;
+  }
+
+  .upload-btn:hover {
+    background: var(--burgundy);
+    transform: translateY(-1px);
+  }
+
+  #fileInput { display: none; }
+
+  /* Preview */
+  .preview-wrap {
+    display: none;
+    margin-top: 24px;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    background: white;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  }
+
+  .preview-wrap img {
+    width: 100%;
+    max-height: 320px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .preview-remove {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    background: rgba(255,255,255,0.9);
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: all 0.2s;
+  }
+
+  .preview-remove:hover {
+    background: white;
+    transform: scale(1.1);
+  }
+
+  /* Style selector */
+  .section {
+    margin-top: 32px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.6s;
+  }
+
+  .section-label {
+    font-family: 'Caveat', cursive;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .style-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .style-card {
+    background: white;
+    border: 2px solid #ebe5dd;
+    border-radius: 14px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .style-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 60%, rgba(245,200,66,0.1));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .style-card:hover {
+    border-color: var(--soft-yellow);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(245,200,66,0.15);
+  }
+
+  .style-card.selected {
+    border-color: var(--burgundy);
+    background: linear-gradient(135deg, white, rgba(232,160,176,0.06));
+    box-shadow: 0 4px 16px rgba(139,58,82,0.12);
+  }
+
+  .style-card.selected::after {
+    opacity: 1;
+  }
+
+  .style-emoji { font-size: 28px; display: block; margin-bottom: 8px; }
+  .style-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .style-desc { font-size: 12px; color: #999; line-height: 1.4; }
+
+  .check-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 22px;
+    height: 22px;
+    background: var(--burgundy);
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+  }
+
+  .style-card.selected .check-badge { display: flex; }
+
+  /* Generate button */
+  .generate-section {
+    margin-top: 32px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.7s;
+  }
+
+  .generate-btn {
+    width: 100%;
+    padding: 18px;
+    background: linear-gradient(135deg, var(--ink) 0%, var(--burgundy) 100%);
+    color: white;
+    border: none;
+    border-radius: 16px;
+    font-size: 17px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+    letter-spacing: 0.05em;
+  }
+
+  .generate-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--burgundy), var(--soft-yellow));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .generate-btn:hover::before { opacity: 1; }
+  .generate-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(26,26,46,0.25); }
+  .generate-btn:active { transform: translateY(0); }
+  .generate-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  .generate-btn span { position: relative; z-index: 1; }
+
+  /* Loading */
+  .loading-wrap {
+    display: none;
+    text-align: center;
+    padding: 48px 24px;
+    background: white;
+    border-radius: 20px;
+    margin-top: 24px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+  }
+
+  .loading-animation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+
+  .dot:nth-child(1) { background: var(--soft-yellow); animation-delay: 0s; }
+  .dot:nth-child(2) { background: var(--dusty-pink); animation-delay: 0.2s; }
+  .dot:nth-child(3) { background: var(--burgundy); animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-12px); }
+  }
+
+  .loading-text {
+    font-family: 'Caveat', cursive;
+    font-size: 20px;
+    color: var(--ink);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .loading-sub {
+    font-size: 13px;
+    color: #aaa;
+  }
+
+  .progress-bar {
+    width: 200px;
+    height: 4px;
+    background: var(--soft-gray);
+    border-radius: 2px;
+    margin: 16px auto 0;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--soft-yellow), var(--dusty-pink));
+    border-radius: 2px;
+    animation: progress 30s linear forwards;
+  }
+
+  @keyframes progress {
+    from { width: 0%; }
+    to { width: 90%; }
+  }
+
+  /* Result */
+  .result-wrap {
+    display: none;
+    margin-top: 24px;
+    border-radius: 20px;
+    overflow: hidden;
+    background: white;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.1);
+  }
+
+  .result-image {
+    width: 100%;
+    display: block;
+  }
+
+  .result-actions {
+    padding: 20px;
+    display: flex;
+    gap: 12px;
+  }
+
+  .btn-download {
+    flex: 1;
+    padding: 14px;
+    background: var(--ink);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-family: 'Noto Sans TC', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+
+  .btn-download:hover { background: var(--burgundy); transform: translateY(-1px); }
+
+  .btn-retry {
+    flex: 1;
+    padding: 14px;
+    background: transparent;
+    color: var(--ink);
+    border: 2px solid #ebe5dd;
+    border-radius: 12px;
+    font-size: 14px;
+    font-family: 'Noto Sans TC', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+
+  .btn-retry:hover { border-color: var(--soft-yellow); color: var(--burgundy); }
+
+  /* Error */
+  .error-wrap {
+    display: none;
+    margin-top: 16px;
+    padding: 16px 20px;
+    background: #fff5f7;
+    border: 1.5px solid #ffd0da;
+    border-radius: 12px;
+    font-size: 14px;
+    color: var(--burgundy);
+    line-height: 1.5;
+  }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Tip */
+  .tip-box {
+    margin-top: 16px;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, rgba(245,200,66,0.08), rgba(232,160,176,0.08));
+    border-radius: 12px;
+    border-left: 3px solid var(--soft-yellow);
+    font-size: 13px;
+    color: #888;
+    line-height: 1.6;
+  }
+
+  .tip-box strong { color: var(--ink); }
+
+  .apikey-wrap {
+    margin-bottom: 16px;
+    background: white;
+    border: 1.5px solid #ebe5dd;
+    border-radius: 14px;
+    padding: 14px 16px;
+    transition: border-color 0.25s;
+  }
+
+  .apikey-wrap.has-key {
+    border-color: var(--accent-green);
+    background: linear-gradient(135deg, white, rgba(125,184,154,0.04));
+  }
+
+  .apikey-inner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .apikey-icon { font-size: 18px; flex-shrink: 0; }
+
+  #geminiKeyInput {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    font-family: 'Noto Sans TC', sans-serif;
+    color: var(--ink);
+    background: transparent;
+    min-width: 0;
+  }
+
+  #geminiKeyInput::placeholder { color: #bbb; }
+
+  .apikey-save {
+    padding: 6px 16px;
+    background: var(--ink);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    font-size: 13px;
+    font-family: 'Noto Sans TC', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .apikey-save:hover { background: var(--burgundy); }
+  .apikey-save.saved { background: var(--accent-green); }
+
+  .apikey-hint {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #bbb;
+    line-height: 1.5;
+  }
+
+  .apikey-hint a { color: var(--accent-green); text-decoration: none; }
+  .apikey-hint a:hover { text-decoration: underline; }
+
+  .apikey-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--accent-green);
+    font-weight: 500;
+    margin-top: 4px;
+  }
+
+  /* Trending styles section */
+  .trending-section {
+    margin-top: 32px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.65s;
+  }
+
+  .trending-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .refresh-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: white;
+    border: 1.5px solid #ebe5dd;
+    border-radius: 50px;
+    font-size: 13px;
+    font-family: 'Noto Sans TC', sans-serif;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.25s;
+    font-weight: 500;
+  }
+
+  .refresh-btn:hover {
+    border-color: var(--soft-yellow);
+    color: var(--burgundy);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(245,200,66,0.15);
+  }
+
+  .refresh-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .refresh-icon {
+    display: inline-block;
+    transition: transform 0.6s ease;
+  }
+
+  .refresh-btn.spinning .refresh-icon {
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .last-updated {
+    font-size: 11px;
+    color: #bbb;
+    margin-left: 4px;
+  }
+
+  .trending-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    min-height: 160px;
+    position: relative;
+  }
+
+  .trending-loading {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 32px;
+    background: white;
+    border-radius: 14px;
+    border: 2px dashed #ebe5dd;
+  }
+
+  .trending-loading-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .tdot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+  .tdot:nth-child(1) { background: var(--soft-yellow); animation-delay: 0s; }
+  .tdot:nth-child(2) { background: var(--dusty-pink); animation-delay: 0.2s; }
+  .tdot:nth-child(3) { background: var(--burgundy); animation-delay: 0.4s; }
+
+  .trending-loading-text {
+    font-size: 13px;
+    color: #aaa;
+    font-family: 'Caveat', cursive;
+    font-size: 16px;
+  }
+
+  .trending-card {
+    background: white;
+    border: 2px solid #ebe5dd;
+    border-radius: 14px;
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .trending-card:hover {
+    border-color: var(--soft-yellow);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(245,200,66,0.15);
+  }
+
+  .trending-card.selected {
+    border-color: var(--burgundy);
+    background: linear-gradient(135deg, white, rgba(232,160,176,0.06));
+    box-shadow: 0 4px 16px rgba(139,58,82,0.12);
+  }
+
+  .trending-card .check-badge { display: none; }
+  .trending-card.selected .check-badge { display: flex; }
+
+  .trend-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    background: linear-gradient(135deg, var(--soft-yellow), var(--dusty-pink));
+    color: white;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    letter-spacing: 0.03em;
+  }
+
+  .trending-error {
+    grid-column: 1 / -1;
+    padding: 16px;
+    background: #fff5f7;
+    border: 1.5px solid #ffd0da;
+    border-radius: 12px;
+    font-size: 13px;
+    color: var(--burgundy);
+    text-align: center;
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 28px 0 0;
+    color: #ccc;
+    font-size: 12px;
+  }
+
+  .divider::before,
+  .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #ebe5dd;
+  }
+
+  /* Footer doodles */
+  .footer-note {
+    text-align: center;
+    margin-top: 48px;
+    font-family: 'Caveat', cursive;
+    font-size: 16px;
+    color: #ccc;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 1s;
+  }
+</style>
+</head>
+<body>
+
+<div class="doodle-bg">
+  <svg width="200" height="200" style="top: 5%; left: -2%;" viewBox="0 0 200 200">
+    <path d="M50,100 Q75,50 100,100 Q125,150 150,100" stroke="#f5c842" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <circle cx="40" cy="60" r="8" stroke="#e8a0b0" stroke-width="2" fill="none"/>
+    <path d="M160,40 L170,20 M165,40 L175,28 M155,35 L168,30" stroke="#e8a0b0" stroke-width="1.5" stroke-linecap="round"/>
+  </svg>
+  <svg width="180" height="180" style="bottom: 10%; right: -1%;" viewBox="0 0 180 180">
+    <path d="M30,90 Q60,30 90,90 Q120,150 150,90" stroke="#8b3a52" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
+    <polygon points="90,20 100,50 130,50 107,67 116,97 90,80 64,97 73,67 50,50 80,50" stroke="#f5c842" stroke-width="2" fill="none"/>
+  </svg>
+  <svg width="120" height="120" style="top: 40%; left: -1%;" viewBox="0 0 120 120">
+    <path d="M20,60 Q40,20 60,60 Q80,100 100,60" stroke="#7db89a" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <circle cx="60" cy="60" r="15" stroke="#e8a0b0" stroke-width="1.5" fill="none"/>
+  </svg>
+</div>
+
+<div class="container">
+  <div class="header">
+    <span class="header-tag">✨ AI 插畫生成器</span>
+    <h1>照片變<span>水彩插畫</span></h1>
+    <div class="header-underline"></div>
+    <p>上傳你的照片，AI 幫你轉換成水彩插畫風格<br>使用 Puter.js 免費生成，無需 API Key</p>
+  </div>
+
+  <div class="upload-section">
+    <div class="upload-zone" id="uploadZone">
+      <span class="upload-icon">🖼️</span>
+      <div class="upload-title">拖曳照片到這裡</div>
+      <div class="upload-sub">或點擊選擇檔案</div>
+      <div class="upload-btn">選擇照片</div>
+      <input type="file" id="fileInput" accept="image/*">
+    </div>
+    <div class="preview-wrap" id="previewWrap">
+      <img id="previewImg" src="" alt="preview">
+      <button class="preview-remove" id="removeBtn">✕</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">🎨 選擇插畫風格</div>
+    <div class="style-grid">
+      <div class="style-card selected" data-style="watercolor_graduation">
+        <div class="check-badge">✓</div>
+        <span class="style-emoji">🎓</span>
+        <div class="style-name">畢業水彩風</div>
+        <div class="style-desc">柔和水彩+手寫塗鴉，像你上傳的那張</div>
+      </div>
+      <div class="style-card" data-style="anime_illustration">
+        <div class="check-badge">✓</div>
+        <span class="style-emoji">✨</span>
+        <div class="style-name">日系插畫風</div>
+        <div class="style-desc">清新動漫風格，線條細緻</div>
+      </div>
+      <div class="style-card" data-style="oil_painting">
+        <div class="check-badge">✓</div>
+        <span class="style-emoji">🖌️</span>
+        <div class="style-name">油畫藝術風</div>
+        <div class="style-desc">厚重筆觸，富有質感的油畫效果</div>
+      </div>
+      <div class="style-card" data-style="pencil_sketch">
+        <div class="check-badge">✓</div>
+        <span class="style-emoji">✏️</span>
+        <div class="style-name">素描鉛筆風</div>
+        <div class="style-desc">黑白素描，線條清晰有力</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trending styles section -->
+  <div class="divider">或選擇 AI 即時搜尋的流行畫風</div>
+
+  <div class="trending-section">
+    <div class="trending-header">
+      <div class="section-label" style="margin-bottom:0;">🔥 當前流行畫風</div>
+      <button class="refresh-btn" id="refreshTrendingBtn">
+        <span class="refresh-icon">↻</span>
+        <span>搜尋最新</span>
+        <span class="last-updated" id="lastUpdated"></span>
+      </button>
+    </div>
+
+
+
+    <div class="trending-grid" id="trendingGrid">
+      <div class="trending-loading">
+        <div class="trending-loading-dots">
+          <div class="tdot"></div><div class="tdot"></div><div class="tdot"></div>
+        </div>
+        <div class="trending-loading-text">點擊「搜尋最新」讓 AI 幫你找流行畫風 ✨</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="generate-section">
+    <button class="generate-btn" id="generateBtn">
+      <span>✨ 開始生成插畫</span>
+    </button>
+    <div class="tip-box" style="margin-top:14px;">
+      <strong>💡 提示：</strong> 使用 Puter.js 的 DALL-E 3 生成，採用「描述圖片內容再重繪」的方式，
+      每次生成約需 15–30 秒。若人臉相似度不夠高屬正常現象，AI 圖生圖需要更進階 API。
+    </div>
+  </div>
+
+  <div class="loading-wrap" id="loadingWrap">
+    <div class="loading-animation">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+    <div class="loading-text">AI 正在作畫中...</div>
+    <div class="loading-sub" id="loadingStatus">分析照片內容</div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+
+  <div class="error-wrap" id="errorWrap"></div>
+
+  <div class="result-wrap" id="resultWrap">
+    <img class="result-image" id="resultImg" src="" alt="generated illustration">
+    <div class="result-actions">
+      <button class="btn-download" id="downloadBtn">⬇ 儲存圖片</button>
+      <button class="btn-retry" id="retryBtn">🔄 重新生成</button>
+    </div>
+  </div>
+
+  <div class="footer-note">Made with ♡ · Powered by Puter.js</div>
+</div>
+
+<script src="https://js.puter.com/v2/"></script>
+<script>
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+const previewWrap = document.getElementById('previewWrap');
+const previewImg = document.getElementById('previewImg');
+const removeBtn = document.getElementById('removeBtn');
+const generateBtn = document.getElementById('generateBtn');
+const loadingWrap = document.getElementById('loadingWrap');
+const loadingStatus = document.getElementById('loadingStatus');
+const errorWrap = document.getElementById('errorWrap');
+const resultWrap = document.getElementById('resultWrap');
+const resultImg = document.getElementById('resultImg');
+const downloadBtn = document.getElementById('downloadBtn');
+const retryBtn = document.getElementById('retryBtn');
+
+let uploadedFile = null;
+let selectedStyle = 'watercolor_graduation';
+
+const stylePrompts = {
+  watercolor_graduation: `Transform into a beautiful Korean webtoon / watercolor illustration style with these characteristics:
+- Soft watercolor washes with loose, expressive brushstrokes
+- Delicate line art with slightly sketchy quality
+- Warm pastel color palette with pops of yellow and dusty pink
+- Hand-drawn doodles and decorative elements like hearts, stars, sparkles scattered around
+- Handwritten-style text annotations in the background
+- White/cream background with watercolor splashes
+- Dreamy, celebratory, youthful aesthetic
+- High detail on faces with big expressive eyes in anime-influenced style
+- Graduation sashes or celebratory clothing elements if present
+Style: Korean manhwa watercolor illustration, similar to graduation portrait art`,
+
+  anime_illustration: `Transform into a clean Japanese anime/manga illustration style:
+- Crisp clean lineart with precise strokes
+- Vibrant saturated colors with cel-shading
+- Large expressive anime eyes with detailed highlights
+- Smooth skin rendering with subtle gradients
+- Soft hair with flowing highlights
+- Clean white background or soft gradient
+- High quality digital illustration aesthetic
+Style: Premium Japanese anime character illustration`,
+
+  oil_painting: `Transform into a rich oil painting style:
+- Visible thick brushstrokes with texture
+- Deep, saturated colors with dramatic lighting
+- Old master painting quality
+- Warm golden tones and rich shadows
+- Painterly background with soft focus
+- Museum-quality portrait painting aesthetic
+Style: Contemporary oil portrait painting`,
+
+  pencil_sketch: `Transform into a detailed pencil sketch:
+- Fine detailed pencil lines and hatching
+- Monochromatic grayscale palette
+- Soft shading with careful attention to form
+- Slightly rough paper texture
+- Artist's sketch quality with confident strokes
+- Both fine detail lines and broader tonal areas
+Style: Professional pencil portrait sketch`
+};
+
+// Upload zone interactions
+uploadZone.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  uploadZone.classList.add('dragover');
+});
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) handleFile(file);
+});
+
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+removeBtn.addEventListener('click', () => {
+  uploadedFile = null;
+  previewWrap.style.display = 'none';
+  uploadZone.style.display = 'block';
+  fileInput.value = '';
+  hideResult();
+});
+
+function handleFile(file) {
+  uploadedFile = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    previewImg.src = e.target.result;
+    previewWrap.style.display = 'block';
+    uploadZone.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+// Style selection (built-in cards)
+document.querySelectorAll('.style-card').forEach(card => {
+  card.addEventListener('click', () => {
+    // Deselect all (both built-in and trending)
+    document.querySelectorAll('.style-card, .trending-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    selectedStyle = card.dataset.style;
+    selectedTrendingPrompt = null;
+  });
+});
+
+// ── Trending styles ──────────────────────────────────────────
+const refreshBtn = document.getElementById('refreshTrendingBtn');
+const trendingGrid = document.getElementById('trendingGrid');
+const lastUpdatedEl = document.getElementById('lastUpdated');
+
+let selectedTrendingPrompt = null;
+const CACHE_KEY = 'trending_styles_cache';
+const CACHE_TTL = 60 * 60 * 1000;
+
+const TREND_EMOJIS = ['🌸','🎭','🌊','🔮','🌿','🏮','🎪','🖼️','🌙','💫','🎨','🦋'];
+
+renderInitialPlaceholder();
+
+function renderInitialPlaceholder() {
+  trendingGrid.innerHTML = `
+    <div class="trending-loading">
+      <div class="trending-loading-dots">
+        <div class="tdot"></div><div class="tdot"></div><div class="tdot"></div>
+      </div>
+      <div class="trending-loading-text">點擊「搜尋最新」讓 AI 幫你找流行畫風 ✨</div>
+    </div>`;
+}
+
+refreshBtn.addEventListener('click', fetchTrendingStyles);
+
+async function fetchTrendingStyles() {
+  // Check cache
+  try {
+    const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+    if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
+      renderTrendingStyles(cached.styles);
+      const mins = Math.round((Date.now() - cached.ts) / 60000);
+      lastUpdatedEl.textContent = `· ${mins}分鐘前更新`;
+      return;
+    }
+  } catch(e) {}
+
+  setTrendingLoading(true);
+
+  try {
+    const response = await fetch('/api/trending', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err?.error || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const styles = data.styles;
+    if (!Array.isArray(styles) || styles.length === 0) throw new Error('資料格式錯誤');
+
+    // Cache
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), styles }));
+    lastUpdatedEl.textContent = '· 剛剛更新';
+
+    renderTrendingStyles(styles);
+
+  } catch (err) {
+    console.error('Gemini trending error:', err);
+    trendingGrid.innerHTML = `<div class="trending-error">⚠️ 搜尋失敗：${err.message}<br><small>請確認 API Key 正確，或稍後再試</small></div>`;
+  } finally {
+    setTrendingLoading(false);
+  }
+}
+
+function setTrendingLoading(loading) {
+  refreshBtn.disabled = loading;
+  refreshBtn.classList.toggle('spinning', loading);
+  if (loading) {
+    trendingGrid.innerHTML = `
+      <div class="trending-loading">
+        <div class="trending-loading-dots">
+          <div class="tdot"></div><div class="tdot"></div><div class="tdot"></div>
+        </div>
+        <div class="trending-loading-text">AI 正在搜尋網路上的流行畫風...</div>
+      </div>`;
+  }
+}
+
+function renderTrendingStyles(styles) {
+  trendingGrid.innerHTML = '';
+  styles.forEach((style, i) => {
+    const emoji = TREND_EMOJIS[i % TREND_EMOJIS.length];
+    const card = document.createElement('div');
+    card.className = 'trending-card';
+    card.innerHTML = `
+      <div class="check-badge">✓</div>
+      <div class="trend-badge">🔥 trending</div>
+      <span class="style-emoji">${emoji}</span>
+      <div class="style-name">${style.name}</div>
+      <div class="style-desc">${style.desc}</div>`;
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.style-card, .trending-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedStyle = null;
+      selectedTrendingPrompt = style.prompt;
+    });
+    trendingGrid.appendChild(card);
+
+    // Stagger animation
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(12px)';
+    setTimeout(() => {
+      card.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+      card.style.opacity = '1';
+      card.style.transform = 'translateY(0)';
+    }, i * 80);
+  });
+}
+
+// Generate
+generateBtn.addEventListener('click', generateImage);
+retryBtn.addEventListener('click', generateImage);
+
+async function generateImage() {
+  if (!uploadedFile) {
+    showError('請先上傳一張照片 📸');
+    return;
+  }
+  if (!selectedStyle && !selectedTrendingPrompt) {
+    showError('請選擇一個畫風 🎨');
+    return;
+  }
+
+  hideResult();
+  showLoading();
+  generateBtn.disabled = true;
+
+  try {
+    updateStatus('正在分析照片內容...', 0);
+
+    const base64 = await fileToBase64(uploadedFile);
+
+    // Describe the image first
+    const describeResponse = await puter.ai.chat(
+      'Describe this photo in detail for an AI image generator. Focus on: number of people, their approximate ages, hairstyles, clothing colors, poses, expressions, and any notable objects. Be specific and visual. Keep it under 150 words.',
+      { vision: true, image: base64 }
+    );
+
+    const description = describeResponse?.message?.content?.[0]?.text
+      || describeResponse?.toString?.()
+      || 'group of young people smiling and posing together';
+
+    updateStatus('AI 正在繪製插畫...', 30);
+
+    // Pick prompt: trending or built-in
+    const stylePrompt = selectedTrendingPrompt || stylePrompts[selectedStyle];
+    const fullPrompt = `${stylePrompt}\n\nImage content to illustrate: ${description}`;
+
+    const imageResponse = await puter.ai.txt2img(fullPrompt);
+
+    updateStatus('完成！', 100);
+
+    let imageUrl;
+    if (typeof imageResponse === 'string') {
+      imageUrl = imageResponse;
+    } else if (imageResponse?.src) {
+      imageUrl = imageResponse.src;
+    } else if (imageResponse instanceof HTMLImageElement) {
+      imageUrl = imageResponse.src;
+    } else {
+      throw new Error('無法取得生成的圖片');
+    }
+
+    showResult(imageUrl);
+
+  } catch (err) {
+    console.error(err);
+    showError(`生成失敗：${err.message || '未知錯誤'}\n\n請確認網路連線正常，或稍後再試。`);
+  } finally {
+    hideLoading();
+    generateBtn.disabled = false;
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      // Return just the base64 data without the prefix
+      const result = e.target.result;
+      const base64 = result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function updateStatus(text, percent) {
+  loadingStatus.textContent = text;
+}
+
+function showLoading() {
+  loadingWrap.style.display = 'block';
+  // Reset progress animation
+  const fill = document.getElementById('progressFill');
+  fill.style.animation = 'none';
+  fill.offsetHeight;
+  fill.style.animation = 'progress 30s linear forwards';
+  loadingWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function hideLoading() {
+  loadingWrap.style.display = 'none';
+}
+
+function showResult(url) {
+  resultImg.src = url;
+  resultWrap.style.display = 'block';
+  resultWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  errorWrap.style.display = 'none';
+
+  downloadBtn.onclick = () => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `illustration_${Date.now()}.png`;
+    a.target = '_blank';
+    a.click();
+  };
+}
+
+function hideResult() {
+  resultWrap.style.display = 'none';
+  errorWrap.style.display = 'none';
+}
+
+function showError(msg) {
+  errorWrap.textContent = '⚠️ ' + msg;
+  errorWrap.style.display = 'block';
+  errorWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+</script>
+</body>
+</html>
