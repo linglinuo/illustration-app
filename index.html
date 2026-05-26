@@ -874,8 +874,7 @@
       <span>✨ 開始生成插畫</span>
     </button>
     <div class="tip-box" style="margin-top:14px;">
-      <strong>💡 提示：</strong> 使用 Puter.js 的 DALL-E 3 生成，採用「描述圖片內容再重繪」的方式，
-      每次生成約需 15–30 秒。若人臉相似度不夠高屬正常現象，AI 圖生圖需要更進階 API。
+      <strong>💡 提示：</strong> 使用 Gemini 2.0 Flash 分析照片並生成插畫，每次約需 10–20 秒。人臉相似度有限屬正常現象。
     </div>
   </div>
 
@@ -1145,45 +1144,33 @@ async function generateImage() {
 
   try {
     updateStatus('正在分析照片內容...', 0);
-
     const base64 = await fileToBase64(uploadedFile);
-
-    // Describe the image first
-    const describeResponse = await puter.ai.chat(
-      'Describe this photo in detail for an AI image generator. Focus on: number of people, their approximate ages, hairstyles, clothing colors, poses, expressions, and any notable objects. Be specific and visual. Keep it under 150 words.',
-      { vision: true, image: base64 }
-    );
-
-    const description = describeResponse?.message?.content?.[0]?.text
-      || describeResponse?.toString?.()
-      || 'group of young people smiling and posing together';
-
-    updateStatus('AI 正在繪製插畫...', 30);
-
-    // Pick prompt: trending or built-in
+    const mimeType = uploadedFile.type || 'image/jpeg';
     const stylePrompt = selectedTrendingPrompt || stylePrompts[selectedStyle];
-    const fullPrompt = `${stylePrompt}\n\nImage content to illustrate: ${description}`;
 
-    const imageResponse = await puter.ai.txt2img(fullPrompt);
+    updateStatus('AI 正在繪製插畫...', 20);
 
-    updateStatus('完成！', 100);
+    const response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ base64, mimeType, stylePrompt })
+    });
 
-    let imageUrl;
-    if (typeof imageResponse === 'string') {
-      imageUrl = imageResponse;
-    } else if (imageResponse?.src) {
-      imageUrl = imageResponse.src;
-    } else if (imageResponse instanceof HTMLImageElement) {
-      imageUrl = imageResponse.src;
-    } else {
-      throw new Error('無法取得生成的圖片');
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err?.error || `HTTP ${response.status}`);
     }
 
+    const data = await response.json();
+    if (!data.imageBase64) throw new Error('沒有收到圖片');
+
+    updateStatus('完成！', 100);
+    const imageUrl = `data:image/png;base64,${data.imageBase64}`;
     showResult(imageUrl);
 
   } catch (err) {
     console.error(err);
-    showError(`生成失敗：${err.message || '未知錯誤'}\n\n請確認網路連線正常，或稍後再試。`);
+    showError(`生成失敗：${err.message || '未知錯誤'}`);
   } finally {
     hideLoading();
     generateBtn.disabled = false;
